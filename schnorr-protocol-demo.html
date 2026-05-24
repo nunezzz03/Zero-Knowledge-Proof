@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schnorr Protocol — Demonstração ZKP</title>
+<style>
+
+  :root {
+    --bg: #0f0f1a;
+    --surface: #1a1a2e;
+    --surface2: #16213e;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --green: #10b981;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 30px;
+    font-size: 0.95rem;
+  }
+  .tabs {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    padding: 10px 22px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ---- CARDS ---- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 1.15rem; margin-bottom: 12px; color: var(--accent2); }
+  .card p { color: var(--muted); line-height: 1.6; margin-bottom: 10px; font-size: 0.93rem; }
+
+  /* ---- CAVE ---- */
+  .cave-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .cave-svg-wrap { width: 100%; max-width: 520px; }
+  svg.cave { width: 100%; border-radius: 12px; }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+  }
+  button {
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.18s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #6d28d9; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-green { background: var(--green); color: white; }
+  .btn-red { background: var(--red); color: white; }
+
+  .log-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    width: 100%;
+    max-width: 520px;
+    min-height: 90px;
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .log-box .ok  { color: var(--green); }
+  .log-box .fail{ color: var(--red); }
+  .log-box .info{ color: var(--accent2); }
+  .log-box .warn{ color: var(--yellow); }
+
+  .stat-row {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 20px;
+    text-align: center;
+    min-width: 120px;
+  }
+  .stat .val { font-size: 1.8rem; font-weight: 700; }
+  .stat .lbl { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .green { color: var(--green); }
+  .red   { color: var(--red); }
+  .yellow{ color: var(--yellow); }
+
+  /* ---- MATH ---- */
+  .math-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media(max-width:600px){ .math-grid { grid-template-columns: 1fr; } }
+  .math-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .math-box h3 { font-size: 0.9rem; color: var(--accent); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .05em; }
+  .math-val {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent2);
+    word-break: break-all;
+    min-height: 32px;
+  }
+  .math-desc { font-size: 0.78rem; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-top: 6px;
+  }
+  .badge-green { background: #064e3b; color: var(--green); }
+  .badge-red   { background: #450a0a; color: var(--red); }
+  .badge-yellow{ background: #451a03; color: var(--yellow); }
+
+  .steps-list {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+  }
+  .steps-list li {
+    counter-increment: step;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+  .steps-list li::before {
+    content: counter(step);
+    min-width: 26px;
+    height: 26px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .steps-list li.active-step { color: var(--text); }
+  .steps-list li.done-step::before { background: var(--green); }
+  .steps-list li.active-step::before { background: var(--yellow); color: #000; }
+
+  /* ---- HASH ---- */
+  .hash-input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .hash-input-row input {
+    flex: 1;
+    min-width: 180px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.9rem;
+  }
+  .hash-input-row input:focus { outline: none; border-color: var(--accent); }
+  .hash-reveal {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 10px;
+    word-break: break-all;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: var(--accent2);
+    line-height: 1.6;
+  }
+
+  /* progress bar */
+  .prob-bar-wrap { background: var(--surface2); border-radius: 999px; height: 8px; overflow: hidden; margin-top: 8px; }
+  .prob-bar { height: 100%; background: linear-gradient(90deg,var(--accent),var(--accent2)); border-radius: 999px; transition: width 0.4s; }
+
+  .info-banner {
+    background: #1e1b4b;
+    border: 1px solid #4f46e5;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: #a5b4fc;
+    margin-bottom: 16px;
+    line-height: 1.55;
+  }
+
+
+.container{max-width:1100px;margin:0 auto;}
+.header{max-width:900px;margin:0 auto 28px;text-align:center;}
+.header p{color:var(--muted);line-height:1.6;margin:0 auto;}
+.section{display:block !important;}
+.tabs,.subtitle{display:none;}
+
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Schnorr Protocol</h1>
+    <p>A step-by-step demonstration of the Schnorr identification protocol: setup, commitment, challenge, response, and verification.</p>
+  </div>
+  <div id="math" class="section">
+  <div class="card">
+    <h2>Schnorr Protocol (simplified)</h2>
+    <p>João wants to prove that he knows the secret <code>x</code> such that <code>g^x mod p = y</code>, without revealing <code>x</code>. This is the core idea behind many modern digital signature systems.</p>
+  </div>
+
+  <div class="info-banner">
+    🔒 <strong>João:</strong> knows <code>x</code> (the secret) &nbsp;|&nbsp;
+    👁️ <strong>Thomas:</strong> only knows <code>g</code>, <code>p</code>, and <code>y = g^x mod p</code>
+  </div>
+
+  <ul class="steps-list" id="schnorr-steps">
+    <li id="s0">Setup: generate public parameters (g, p) and the public key y = g^x mod p</li>
+    <li id="s1">João chooses a random nonce <code>r</code> and computes <code>R = g^r mod p</code></li>
+    <li id="s2">Thomas sends a random challenge <code>c</code></li>
+    <li id="s3">João responds with <code>s = r + c·x</code> (without revealing x or r individually)</li>
+    <li id="s4">Thomas checks: <code>g^s mod p == R · y^c mod p</code></li>
+  </ul>
+
+  <div class="math-grid" id="schnorr-grid">
+    <div class="math-box"><h3>Parameters</h3><div class="math-val" id="m-params">—</div><div class="math-desc">g (generator), p (prime)</div></div>
+    <div class="math-box"><h3>Secret x (only João)</h3><div class="math-val" id="m-x">—</div><div class="math-desc">It is never transmitted</div></div>
+    <div class="math-box"><h3>Public key y</h3><div class="math-val" id="m-y">—</div><div class="math-desc">y = g^x mod p</div></div>
+    <div class="math-box"><h3>Nonce r</h3><div class="math-val" id="m-r">—</div><div class="math-desc">Random in each round</div></div>
+    <div class="math-box"><h3>Commitment R</h3><div class="math-val" id="m-R">—</div><div class="math-desc">R = g^r mod p</div></div>
+    <div class="math-box"><h3>Challenge c</h3><div class="math-val" id="m-c">—</div><div class="math-desc">Sent by Thomas</div></div>
+    <div class="math-box"><h3>Response s</h3><div class="math-val" id="m-s">—</div><div class="math-desc">s = r + c·x</div></div>
+    <div class="math-box"><h3>Verification</h3><div class="math-val" id="m-verify">—</div><div class="math-desc">g^s mod p vs R·y^c mod p</div></div>
+  </div>
+
+  <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn-primary" onclick="schnorrStep()">▶ Next Step</button>
+    <button class="btn-green"   onclick="schnorrFull()">⚡ Run All</button>
+    <button class="btn-secondary" onclick="schnorrReset()">🔄 Reset</button>
+  </div>
+  <div class="log-box" id="schnorr-log" style="margin-top:14px;">Click “Next Step” to continue...</div>
+</div>
+</div>
+<script>
+
+function clearLog(id){ const el=document.getElementById(id); if(el) el.innerHTML=''; }
+function log(id,msg,kind='info'){ const el=document.getElementById(id); if(!el) return; const row=document.createElement('div'); row.className='log-line log-'+kind; row.textContent=msg; el.appendChild(row); el.scrollTop=el.scrollHeight; }
+function modpow(base, exp, mod){ base = base % mod; let result = 1n; while (exp > 0n) { if (exp % 2n === 1n) result = (result * base) % mod; exp = exp / 2n; base = (base * base) % mod; } return result; }
+
+// ============================================================
+// SCHNORR
+// ============================================================
+const G=5n, P=23n; // small prime for demo
+let schnorr={x:0n,y:0n,r:0n,R:0n,c:0n,s:0n,step:0};
+
+function schnorrReset(){
+  schnorr={x:0n,y:0n,r:0n,R:0n,c:0n,s:0n,step:0};
+  ['s0','s1','s2','s3','s4'].forEach(id=>{
+    document.getElementById(id).className='';
+  });
+  ['m-params','m-x','m-y','m-r','m-R','m-c','m-s','m-verify'].forEach(id=>{
+    document.getElementById(id).textContent='—';
+    document.getElementById(id).innerHTML='—';
+  });
+  clearLog('schnorr-log');
+  document.getElementById('schnorr-log').textContent='Click “Next Step” to continue...';
+}
+
+function setMath(id,val){ document.getElementById(id).textContent=val; }
+function markStep(i,done=true){
+  const ids=['s0','s1','s2','s3','s4'];
+  if(done) document.getElementById(ids[i]).className='done-step';
+  else document.getElementById(ids[i]).className='active-step';
+}
+
+function schnorrStep(){
+  const st=schnorr.step;
+  if(st===0){
+    schnorr.x = BigInt(2+Math.floor(Math.random()*8)); // 2..9
+    schnorr.y = modpow(G,schnorr.x,P);
+    setMath('m-params',`g=${G}, p=${P}`);
+    setMath('m-x',`${schnorr.x} (SECRET)`);
+    setMath('m-y',String(schnorr.y));
+    markStep(0,true);
+    log('schnorr-log',`Setup: g=${G}, p=${P}, x=${schnorr.x} (secret), y=g^x mod p = ${schnorr.y}`,'info');
+    schnorr.step=1;
+  } else if(st===1){
+    schnorr.r = BigInt(1+Math.floor(Math.random()*10));
+    schnorr.R = modpow(G,schnorr.r,P);
+    setMath('m-r',String(schnorr.r));
+    setMath('m-R',String(schnorr.R));
+    markStep(1,true);
+    log('schnorr-log',`João chooses r=${schnorr.r}, calculates R=g^r mod p = ${schnorr.R} then sends R to Thomas.`,'info');
+    schnorr.step=2;
+  } else if(st===2){
+    schnorr.c = BigInt(1+Math.floor(Math.random()*5));
+    setMath('m-c',String(schnorr.c));
+    markStep(2,true);
+    log('schnorr-log',`Thomas sends a random challenge c=${schnorr.c}.`,'warn');
+    schnorr.step=3;
+  } else if(st===3){
+    schnorr.s = schnorr.r + schnorr.c * schnorr.x;
+    setMath('m-s',String(schnorr.s));
+    markStep(3,true);
+    log('schnorr-log',`João calculates s = r + c·x = ${schnorr.r} + ${schnorr.c}·${schnorr.x} = ${schnorr.s} and send to Thomas.`,'info');
+    schnorr.step=4;
+  } else if(st===4){
+    const lhs = modpow(G,schnorr.s,P);
+    const rhs = (schnorr.R * modpow(schnorr.y,schnorr.c,P)) % P;
+    const ok  = lhs === rhs;
+    const verEl = document.getElementById('m-verify');
+    verEl.innerHTML = `g^s=${lhs} ${ok?'==':'!='} R·y^c=${rhs}`;
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + (ok?'badge-green':'badge-red');
+    badge.textContent = ok ? '✅ VALID' : '❌ NOT VALID';
+    verEl.appendChild(badge);
+    markStep(4,true);
+    if(ok){
+      log('schnorr-log',`✅ Verification OK! g^${schnorr.s} mod ${P} = ${lhs} = R·y^c mod ${P}. João proved that he knows x WITHOUT revealing it!`,'ok');
+    } else {
+      log('schnorr-log',`❌ Verification FAILED.`,'fail');
+    }
+    schnorr.step=5;
+  } else {
+    log('schnorr-log','Round finished. Click Reset to run it again.','warn');
+  }
+}
+
+function schnorrFull(){
+  schnorrReset();
+  for(let i=0;i<5;i++) schnorrStep();
+}
+schnorrReset();
+</script>
+</body>
+</html>
